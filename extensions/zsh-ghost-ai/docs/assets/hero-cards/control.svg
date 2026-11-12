@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
+  <defs>
+    <linearGradient id="cardGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#101722"/>
+      <stop offset="100%" stop-color:#0A0D12"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="160" rx="14" fill="url(#cardGrad3)" stroke="#1F2A3B" stroke-width="1"/>
+  
+  <!-- Shield icon -->
+  <path d="M34 46L24 56L24 66Q24 74 30 78Q36 82 42 78Q48 82 54 78Q60 74 60 66L60 56L50 46Z" fill="#17202E" stroke="#1F2A3B" stroke-width="2"/>
+  <path d="M30 78Q36 82 42 78Q48 82 54 78" stroke="#39FF14" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <rect x="34" y="46" width="12" height="4" rx="2" fill="#1F2A3B"/>
+  
+  <!-- Cursor arrows -->
+  <path d="M140 40h20v20h-20z" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.4"/>
+  <path d="M160 50l-8-8l8-8" fill="#00F0FF" opacity="0.6"/>
+  <path d="M140 60h20v20h-20z" fill="none" stroke="#39FF14" stroke-width="2" opacity="0.4"/>
+  <path d="M160 70l-8-8l8-8" fill="#39FF14" opacity="0.6"/>
+  
+  <!-- Label -->
+  <text x="34" y="80" font-family="JetBrains Mono, monospace" font-size="11" fill="#5C7087" letter-spacing="1">USER</text>
+  <text x="34" y="94" font-family="JetBrains Mono, monospace" font-size="10" fill="#8493A5" letter-spacing="0.5">ACCEPT · DISMISS</text>
+  
+  <!-- Accent line -->
+  <rect x="34" y="110" width="40" height="2" rx="1" fill="#00F0FF" opacity="0.8"/>
+</svg>

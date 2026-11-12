@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
+  <defs>
+    <linearGradient id="cardGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#101722"/>
+      <stop offset="100%" stop-color:#0A0D12"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="160" rx="14" fill="url(#cardGrad2)" stroke="#1F2A3B" stroke-width="1"/>
+  
+  <!-- Provider dots -->
+  <circle cx="42" cy="46" r="5" fill="#00F0FF" opacity="0.8"/>
+  <circle cx="66" cy="46" r="5" fill="#39FF14" opacity="0.8"/>
+  <circle cx="90" cy="46" r="5" fill="#0088FF" opacity="0.8"/>
+  
+  <!-- Connecting lines -->
+  <path d="M47 46L61 46" stroke="#5C7087" stroke-width="2" opacity="0.4"/>
+  <path d="M71 46L85 46" stroke="#5C7087" stroke-width="2" opacity="0.4"/>
+  
+  <!-- Cloud shapes (faint, crossed out conceptually by nodes) -->
+  <path d="M140 50Q130 50 126 54Q122 58 126 62Q130 66 136 66Q142 66 146 62Q150 58 146 54Q142 50 136 50Z" fill="#17202E" stroke="#1F2A3B" stroke-width="1" opacity="0.5"/>
+  <path d="M130 66L146 50" stroke="#5C7087" stroke-width="1" opacity="0.4" stroke-dasharray="4,4"/>
+  
+  <!-- Endpoints -->
+  <rect x="130" y="80" width="24" height="6" rx="3" fill="#17202E" stroke="#1F2A3B" stroke-width="1"/>
+  <rect x="130" y="92" width="30" height="6" rx="3" fill="#17202E" stroke="#1F2A3B" stroke-width="1"/>
+  <rect x="130" y="104" width="20" height="6" rx="3" fill="#17202E" stroke="#1F2A3B" stroke-width="1"/>
+  
+  <!-- Label -->
+  <text x="34" y="80" font-family="JetBrains Mono, monospace" font-size="11" fill="#5C7087" letter-spacing="1">ENDPOINT</text>
+  <text x="34" y="94" font-family="JetBrains Mono, monospace" font-size="10" fill="#8493A5" letter-spacing="0.5">ANY · OPEN · CLAUDE</text>
+  
+  <!-- Accent line -->
+  <rect x="34" y="110" width="40" height="2" rx="1" fill="#00F0FF" opacity="0.8"/>
+</svg>

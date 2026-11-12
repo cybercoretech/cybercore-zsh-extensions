@@ -1,0 +1,145 @@
+/* ==========================================================================
+   zsh-ghost-ai — Design tokens (Ghost AI / CYBERGRID)
+   Industrial plating and hazard paint under neural-net neon.
+   Colours are the 11 CYBERGRID slots written by kit/chooser.js via themeVars.
+   ========================================================================== */
+
+:root {
+  /* CYBERGRID surfaces */
+  --bg: #080B10;
+  --white: #E5EDF5;
+  --panel: #101722;
+  --line: #1F2A3B;
+  --muted: #8493A5;
+
+  /* CYBERGRID neons */
+  --acid: #39FF14;
+  --pink: #FF00AA;
+  --purple: #0088FF;
+  --cyan: #00F0FF;
+  --orange: #FFBF4A;
+  --red: #F44336;
+  --fg: var(--white);
+
+  /* Legacy aliases (kept for themeVars + existing JS) */
+  --bg-primary: var(--bg);
+  --bg-secondary: var(--panel);
+  --bg-elevated: #17202E;
+  --accent-primary: var(--cyan);
+  --accent-secondary: var(--acid);
+  --accent-tertiary: var(--pink);
+  --text-primary: var(--white);
+  --text-secondary: var(--muted);
+  --text-muted: var(--muted);
+  --text-ghost: #5C7087;
+  --border: var(--line);
+
+  /* Typography */
+  --display: "Oxanium", "Space Grotesk", ui-sans-serif, sans-serif;
+  --sans: "Space Grotesk", ui-sans-serif, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --hud: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Layout / effects */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --wrap: 1180px;
+  --plate: color-mix(in srgb, var(--panel) 86%, transparent);
+  --bevel: polygon(0 10px, 10px 0, calc(100% - 22px) 0, 100% 22px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 22px 100%, 0 calc(100% - 22px));
+  --bevel-sm: polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+  --hazard: repeating-linear-gradient(-45deg, var(--acid) 0 8px, transparent 8px 16px);
+  color-scheme: dark;
+}
+
+@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; scrollbar-width: thin; scrollbar-color: var(--acid) var(--bg); }
+body {
+  margin: 0;
+  background:
+    radial-gradient(60vw 40vh at 85% 0%, color-mix(in srgb, var(--pink) 14%, transparent), transparent 70%),
+    radial-gradient(50vw 40vh at 0% 30%, color-mix(in srgb, var(--acid) 8%, transparent), transparent 70%),
+    radial-gradient(70vw 50vh at 50% 110%, color-mix(in srgb, var(--orange) 10%, transparent), transparent 70%),
+    var(--bg);
+  color: var(--white);
+  font: 400 1rem/1.65 var(--sans);
+  overflow-x: hidden;
+  transition: background-color .5s var(--ease), color .5s;
+}
+body::after {
+  /* riveted plating grid */
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--muted) 50%, transparent) 1px, transparent 1.5px),
+    linear-gradient(color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 96px 96px;
+  mask-image: linear-gradient(180deg, #000, transparent 85%);
+}
+::selection { background: var(--acid); color: var(--bg); }
+a { color: inherit; text-decoration: none; }
+code, pre, kbd { font-family: var(--mono); }
+:focus-visible { outline: 2px solid var(--acid); outline-offset: 3px; }
+svg { display: block; }
+
+/* Reveal-on-scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+}
+.reveal.in { opacity: 1; transform: none; }
+
+/* Glitch text */
+.glitch {
+  position: relative;
+  display: inline-block;
+}
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.glitch::before {
+  color: var(--acid);
+  clip-path: inset(0 0 65% 0);
+  transform: translate(-2px, -1px);
+  opacity: 0.8;
+  animation: gg-a 3.6s infinite steps(1);
+}
+.glitch::after {
+  color: var(--cyan);
+  clip-path: inset(62% 0 0 0);
+  transform: translate(2px, 1px);
+  opacity: 0.8;
+  animation: gg-b 2.9s infinite reverse steps(1);
+}
+@keyframes gg-a {
+  0%, 92%, 100% { transform: none; }
+  93% { transform: translate(-4px, 1px); }
+  95% { transform: translate(3px, -2px); }
+  97% { transform: translate(-1px, 2px); }
+}
+@keyframes gg-b {
+  0%, 92%, 100% { transform: none; }
+  93% { transform: translate(4px, -1px); }
+  95% { transform: translate(-3px, 2px); }
+  97% { transform: translate(1px, -2px); }
+}
+
+/* Cursor blink */
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes blink {
+  50% { opacity: 0.2; }
+}

@@ -1,0 +1,195 @@
+#autoload
+# ghost-ai: the zsh-ghost-ai command.
+
+emulate -L zsh
+setopt extendedglob
+
+local cmd=${1:-status}
+(( $# )) && shift
+
+local ok=$'\e[32m✓\e[0m' bad=$'\e[31m✗\e[0m' warn=$'\e[33m!\e[0m'
+[[ -t 1 ]] || { ok='ok'; bad='FAIL'; warn='warn'; }
+
+_zga_cli_last_error() {
+  _zga_state_dir
+  [[ -s $REPLY/last-error ]] && REPLY=$(<$REPLY/last-error) || REPLY=""
+}
+
+case $cmd in
+  version|--version|-V)
+    print -r -- "zsh-ghost-ai $ZGA_VERSION"
+    ;;
+
+  status)
+    local provider model endpoint state=off
+    _zga_get provider; provider=$REPLY
+    _zga_get model;    model=$REPLY
+    _zga_get endpoint; endpoint=$REPLY
+    (( _ZGA_ENABLED )) && state=on
+    print -r -- "zsh-ghost-ai $ZGA_VERSION: $state"
+    print -r -- "  mode      ${_ZGA_MODE:-auto (decided at the next prompt)}"
+    print -r -- "  provider  $provider"
+    print -r -- "  model     ${model:-unset}"
+    print -r -- "  endpoint  ${endpoint:-unset}"
+    _zga_cli_last_error
+    [[ -n $REPLY ]] && print -r -- "  last error  $REPLY"
+    ;;
+
+  on)     _ZGA_ENABLED=1; _ZGA_LAST_BUFFER=""; print -r -- "ghost-ai: on" ;;
+  off)    _ZGA_ENABLED=0; _zga_reset 2>/dev/null; print -r -- "ghost-ai: off" ;;
+  toggle) (( _ZGA_ENABLED )) && ghost-ai off || ghost-ai on ;;
+
+  test)
+    # ghost-ai test "git che": one completion, right now, with timing.
+    local line=${1:?usage: ghost-ai test \"<start of a command>\"}
+    local _ZGA_TIMEOUT_OVERRIDE=30   # a one-off check may wait for a cold model
+    zmodload zsh/datetime
+    local start=$EPOCHREALTIME
+    if _zga_complete "$line"; then
+      printf '%s\e[2m%s\e[0m   (%d ms)\n' "$line" "$REPLY" $(( (EPOCHREALTIME - start) * 1000 ))
+      [[ -n $REPLY ]] || print -r -- "(the model had no completion for this line)"
+    else
+      _zga_cli_last_error
+      print -u2 -r -- "ghost-ai: no completion: ${REPLY#* * }"
+      return 1
+    fi
+    ;;
+
+  config)
+    local key
+    for key in mode provider model endpoint timeout debounce min-chars max-tokens \
+               max-length history-lines max-files send-history highlight bindkeys \
+               api-key-env ignore; do
+      _zga_get $key
+      printf '  %-14s %s\n' $key "${REPLY:-(unset)}"
+    done
+    zstyle -s ':ghost-ai:settings' key-cmd REPLY && printf '  %-14s %s\n' key-cmd "$REPLY"
+    print -r -- "Change with: zstyle ':ghost-ai:*' <setting> <value>"
+    ;;
+
+  doctor)
+    local fails=0 provider model endpoint
+    _zga_get provider; provider=$REPLY
+    _zga_get model;    model=$REPLY
+    _zga_get endpoint; endpoint=${REPLY%/}
+
+    print -r -- "zsh-ghost-ai $ZGA_VERSION"
+    if is-at-least 5.8; then print -r -- "  $ok zsh $ZSH_VERSION"
+    else print -r -- "  $bad zsh $ZSH_VERSION (5.8 or newer needed)"; (( ++fails )); fi
+    local tool
+    for tool in curl jq; do
+      if (( $+commands[$tool] )); then print -r -- "  $ok $tool"
+      else print -r -- "  $bad $tool not found"; (( ++fails )); fi
+    done
+
+    case $provider in
+      ollama)
+        local tags
+        if tags=$(curl -s -m 3 "$endpoint/api/tags" 2>/dev/null) && [[ -n $tags ]]; then
+          print -r -- "  $ok Ollama at $endpoint"
+          if [[ $(jq -r --arg m "$model" '.models[]? | select(.name == $m or .model == $m) | .name' <<<"$tags" 2>/dev/null) == "$model" ]]; then
+            print -r -- "  $ok model $model"
+          else
+            print -r -- "  $bad model $model isn't pulled. Run: ollama pull $model"; (( ++fails ))
+          fi
+        else
+          print -r -- "  $bad Ollama isn't answering at $endpoint. Install it from https://ollama.com, or start it: ollama serve"
+          (( ++fails ))
+        fi
+        ;;
+      anthropic|openai)
+        _zga_api_key
+        if [[ -n $REPLY ]]; then print -r -- "  $ok API key found"
+        elif [[ $provider == anthropic ]] && (( $+commands[ant] )); then print -r -- "  $warn no API key; will try your 'ant auth login' profile"
+        elif [[ $provider == openai ]]; then print -r -- "  $warn no API key (fine for local servers)"
+        else
+          _zga_get api-key-env
+          print -r -- "  $bad no API key: export $REPLY, or zstyle ':ghost-ai:*' key-cmd '<command>'"; (( ++fails ))
+        fi
+        [[ $provider == openai && -z $model ]] && { print -r -- "  $bad no model set: zstyle ':ghost-ai:*' model <name>"; (( ++fails )); }
+        ;;
+      *)
+        if (( $+functions[_zga_provider_$provider] )); then print -r -- "  $ok custom provider $provider"
+        else print -r -- "  $bad unknown provider '$provider' (ollama, anthropic or openai)"; (( ++fails )); fi
+        ;;
+    esac
+
+    if (( ! fails )); then
+      local _ZGA_TIMEOUT_OVERRIDE=30   # may include loading the model
+      zmodload zsh/datetime
+      local start=$EPOCHREALTIME ms
+      if _zga_complete "git che"; then
+        ms=$(( (EPOCHREALTIME - start) * 1000 ))
+        if [[ -n $REPLY ]]; then
+          printf '  %s test completion: git che\e[2m%s\e[0m (%d ms)\n' "$ok" "$REPLY" $ms
+          (( ms > 1500 )) && print -r -- "  $warn that's slow for typing; a smaller or local model will feel better"
+        else
+          print -r -- "  $warn the model answered, but with nothing for 'git che'"
+        fi
+      else
+        _zga_cli_last_error
+        print -r -- "  $bad test completion failed: ${REPLY#* * }"; (( ++fails ))
+      fi
+    fi
+
+    if [[ -o interactive ]]; then
+      local bound=$(bindkey -M main '^[[C' 2>/dev/null)
+      if [[ $bound == *ghost-ai-accept* ]]; then print -r -- "  $ok → is bound to accept"
+      elif _zga_is bindkeys; then print -r -- "  $warn → is bound to ${bound##* }, not ghost-ai-accept (another plugin rebound it?)"
+      else print -r -- "  $ok key bindings left to you (bindkeys no)"; fi
+    fi
+    if (( $+functions[_zsh_autosuggest_start] )); then
+      if [[ $_ZGA_MODE == standalone ]]; then
+        print -r -- "  $warn zsh-autosuggestions is loaded and mode is standalone: both draw ghost text. Use: zstyle ':ghost-ai:*' mode auto"
+      elif (( ! ${+ZSH_AUTOSUGGEST_USE_ASYNC} )); then
+        print -r -- "  $bad zsh-autosuggestions runs synchronously, so AI suggestions are off (they would freeze typing). Remove 'unset ZSH_AUTOSUGGEST_USE_ASYNC'"
+        (( ++fails ))
+      else
+        print -r -- "  $ok strategy mode: zsh-autosuggestions draws, AI fills in after: ${ZSH_AUTOSUGGEST_STRATEGY}"
+      fi
+    fi
+    if (( $+functions[_zsh_highlight] )) && [[ ${widgets[ghost-ai-accept]} != user:* ]]; then
+      print -r -- "  $warn zsh-syntax-highlighting loaded first; load zsh-ghost-ai before it"
+    fi
+
+    _zga_cli_last_error
+    [[ -n $REPLY ]] && print -r -- "  last error: $REPLY"
+    (( fails )) && { print -r -- "$fails problem(s) found."; return 1; }
+    print -r -- "All good."
+    ;;
+
+  clear-cache)
+    _zga_cache_clear
+    print -r -- "ghost-ai: cache cleared"
+    ;;
+
+  update)
+    local url=https://raw.githubusercontent.com/cybercoretech/zsh-ghost-ai/main/install.sh
+    print -r -- "Updating from $url"
+    curl -fsSL "$url" | sh -s -- --yes --dir "$ZGA_ROOT" || return 1
+    print -r -- "Restart your shell to load it: exec zsh"
+    ;;
+
+  uninstall)
+    sh "$ZGA_ROOT/uninstall.sh" --dir "$ZGA_ROOT" "$@"
+    ;;
+
+  help|-h|--help)
+    print -r -- "usage: ghost-ai <command>
+
+  status        provider, model and whether it's on
+  on | off | toggle
+  test <line>   one completion now, e.g. ghost-ai test \"git che\"
+  doctor        check the setup and run a test completion
+  config        the effective settings
+  clear-cache
+  update        install the latest release
+  uninstall     remove zsh-ghost-ai and its ~/.zshrc block
+  version"
+    ;;
+
+  *)
+    print -u2 -r -- "ghost-ai: unknown command '$cmd' (try: ghost-ai help)"
+    return 2
+    ;;
+esac

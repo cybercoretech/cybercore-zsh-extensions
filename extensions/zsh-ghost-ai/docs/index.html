@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080B10">
+  <title>GHOST AI — AI-powered command prediction for Zsh</title>
+  <meta name="description" content="AI-powered command prediction for Zsh. Type naturally. Watch your next command appear. Press → to accept. Never interrupts your workflow.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/theme-chooser.css">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="apple-touch-icon" type="image/svg+xml" href="assets/icons/apple-touch-icon.svg">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+
+  <!-- Ghost AI sigil + icons (inline, theme-aware) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="gg-hot" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" style="stop-color:var(--pink)"/>
+        <stop offset="1" style="stop-color:var(--cyan)"/>
+      </linearGradient>
+      <linearGradient id="gg-glow" x1="0" y1="0" x2="120" y2="120">
+        <stop offset="0" style="stop-color:var(--acid)"/>
+        <stop offset=".5" style="stop-color:var(--cyan)"/>
+        <stop offset="1" style="stop-color:var(--pink)"/>
+      </linearGradient>
+    </defs>
+    <!-- Ghost head inside a terminal frame; the → accept arrow is the mouth -->
+    <symbol id="ga-sigil" viewBox="0 0 120 120">
+      <rect x="8" y="8" width="104" height="104" rx="6" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="16" cy="16" r="3" fill="var(--pink)"/>
+      <circle cx="23" cy="16" r="3" fill="var(--acid)"/>
+      <circle cx="30" cy="16" r="3" fill="var(--cyan)"/>
+      <path d="M42 48c-6 0-11 4-11 10s5 10 11 10 11-10 11-10-5-10-11-10Z" fill="none" stroke="var(--white)" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="47" cy="50" r="3" fill="var(--cyan)"/>
+      <circle cx="73" cy="50" r="3" fill="var(--acid)"/>
+      <path d="M56 70l4 4 4-4" fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M60 74l4-4M60 66l4 4" fill="none" stroke="var(--muted)" stroke-width="2" opacity=".5"/>
+      <path d="M42 62H78" fill="none" stroke="var(--cyan)" stroke-width="1" opacity=".3"/>
+    </symbol>
+    <symbol id="i-ghost" viewBox="0 0 24 24"><path d="M8 12c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="10" cy="10" r="2" fill="currentColor"/><path d="M14 16l3 3 3-3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-node" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9V6M12 15v3M9 12H6M15 12h3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2L3 7v9c0 5 5 9 5 9s5-4 5-9V7Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V3H3v13h5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  </svg>
+
+  <!-- Ghost Effect overlay (signature animation, plays once) -->
+  <div id="ghost-effect-overlay" class="ghost-effect-overlay">
+    <div class="ghost-effect-terminal">
+      <div class="ghost-effect-header">
+        <div class="ghost-effect-dots">
+          <span class="dot ge-dot-red"></span>
+          <span class="dot ge-dot-yellow"></span>
+          <span class="dot ge-dot-green"></span>
+        </div>
+        <span class="ghost-effect-title">zsh · ghost-ai</span>
+      </div>
+      <div class="ghost-effect-body">
+        <div class="ge-line">
+          <span class="ge-prompt">&gt; </span>
+          <span id="ge-typed"></span>
+          <span class="ge-cursor" id="ge-cursor">▋</span>
+        </div>
+        <div class="ge-line">
+          <span class="ge-prompt">&gt; </span>
+          <span id="ge-typed-ghost"></span>
+          <span class="ge-cursor" id="ge-ghost-caret">▋</span>
+        </div>
+        <div class="ge-hint" id="ge-hint">Press &rarr; to accept &nbsp;·&nbsp; Esc to dismiss</div>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <div class="noscript">
+      JavaScript is required for the interactive demo. <a href="https://github.com/cybercoretech/zsh-ghost-ai">View on GitHub</a>
+    </div>
+  </noscript>
+
+  <!-- Header (diagprint navbar: brand sigil + nav + theme chooser) -->
+  <header class="header">
+    <a class="brand" href="#" aria-label="GHOST AI home">
+      <svg class="brand-sigil"><use href="#ga-sigil"/></svg>
+      <span class="brand-name">GHOST<span class="accent"> AI</span><small>TERMINAL PREDICTION</small></span>
+    </a>
+    <nav class="main-nav" aria-label="Primary navigation">
+      <a href="#features">features</a>
+      <a href="#how-it-works">how it works</a>
+      <a href="#providers">providers</a>
+      <a href="#preview">preview</a>
+      <a href="#install">installation</a>
+      <a href="https://github.com/cybercoretech/zsh-ghost-ai" target="_blank" rel="noopener" class="hot">SOURCE ↗<em>LIVE</em></a>
+    </nav>
+    <div class="theme-picker" id="picker">
+      <cybercore-theme-chooser adopt default="cybercore-tech">
+        <button class="theme-trigger" type="button">CYBERCORE TECH</button>
+      </cybercore-theme-chooser>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- Hero (diagprint pattern: sigil, glitch h1, lede, CTA, HUD terminal) -->
+    <section class="hero" id="hero">
+      <div class="shell">
+        <div class="sigil-hero" aria-hidden="true">
+          <svg><use href="#ga-sigil"/></svg>
+          <span class="sigil-ping"></span>
+        </div>
+        <p class="eyebrow"><i class="blink"></i>GHOST AI // ZSH PREDICTION <b>//</b> <span id="eyebrowVer">v0.1.0</span></p>
+        <h1>Make every failure <em data-text="legible.">predictable.</em></h1>
+        <p class="lede"><b>Ghost AI</b> predicts your next command inline as you type. Accept with &rarr;, dismiss with Esc. Nothing runs unless you say so.</p>
+        <div class="actions">
+          <a class="button hot" href="#install"><svg><use href="#i-zap"/></svg>Install now <span>↗</span></a>
+          <a class="button" href="https://github.com/cybercoretech/zsh-ghost-ai" target="_blank"><svg><use href="#i-node"/></svg>View on GitHub <span>→</span></a>
+        </div>
+        <div class="release"><i></i> Ollama · OpenAI Compatible · Claude</div>
+      </div>
+      <div class="shell">
+        <div class="terminal-card">
+          <div class="hud-corners">
+            <i class="hud-c tl"></i><i class="hud-c tr"></i><i class="hud-c bl"></i><i class="hud-c br"></i>
+          </div>
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-yellow"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <span class="terminal-title">zsh · ghost-ai</span>
+          </div>
+          <div class="terminal-body" id="terminal-body">
+            <div class="line line-cursor" id="line-cursor">
+              <span class="prompt">&gt; </span><span class="typed" id="typed"></span><span class="cursor blink" id="cursor">▋</span>
+            </div>
+            <div class="line line-ghost hidden" id="line-ghost">
+              <span class="prompt">&gt; </span><span class="typed-ghost" id="typed-ghost"></span><span class="ghost-caret">▋</span>
+            </div>
+            <div class="line line-hint hidden" id="line-hint">
+              <span class="hint-text">Press &rarr; to accept &nbsp;·&nbsp; Esc to dismiss</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features (diagprint surface cards) -->
+    <section class="shell section" id="features">
+      <div class="head">
+        <div>
+          <p class="kicker">01 / FEATURES</p>
+          <h2>Four ideas.<br><em>One goal: your terminal, faster.</em></h2>
+        </div>
+        <p>AI-powered command prediction for Zsh. Type naturally. Watch your next command appear. Press &rarr; to accept. Never interrupts your workflow.</p>
+      </div>
+      <div class="cards">
+        <article class="card reveal" style="--c: var(--acid)">
+          <div class="card-index">[01] LOCAL AI FIRST</div>
+          <svg class="card-icon"><use href="#i-ghost"/></svg>
+          <h3>Ollama-powered</h3>
+          <p>Local predictions without requiring a cloud AI service. Your commands never leave your machine.</p>
+          <code>Ollama</code>
+        </article>
+        <article class="card reveal reveal-delay" style="--c: var(--cyan)">
+          <div class="card-index">[02] MULTIPLE PROVIDERS</div>
+          <svg class="card-icon"><use href="#i-node"/></svg>
+          <h3>OpenAI-compatible &amp; Claude</h3>
+          <p>Connect to any OpenAI-compatible endpoint or Anthropic Claude. Swap providers in your zshrc.</p>
+          <code>OpenAI · Claude</code>
+        </article>
+        <article class="card reveal" style="--c: var(--pink)">
+          <div class="card-index">[03] YOU STAY IN CONTROL</div>
+          <svg class="card-icon"><use href="#i-shield"/></svg>
+          <h3>Never auto-executes</h3>
+          <p>Suggestions appear in gray and run only when you press &rarr;. Dismiss with Esc.</p>
+          <code>&rarr; to accept</code>
+        </article>
+      </div>
+    </section>
+
+    <!-- How it works (gate-style steps) -->
+    <section class="shell section" id="how-it-works">
+      <div class="head">
+        <div>
+          <p class="kicker">02 / PREDICTION FLOW</p>
+          <h2>Type naturally.<br><em>Ghost AI fills in the rest.</em></h2>
+        </div>
+        <p>As you type, Ghost AI predicts your next command and shows it inline. Accept with &rarr;, dismiss with Esc. Nothing runs unless you say so.</p>
+      </div>
+      <div class="steps">
+        <article class="step reveal">
+          <div class="step-number">01</div>
+          <h3>Type a command</h3>
+          <p>Start typing in your terminal as usual. Ghost AI watches your input without interrupting your flow.</p>
+          <code>git commit -m</code>
+        </article>
+        <article class="step reveal reveal-delay">
+          <div class="step-number">02</div>
+          <h3>Ghost predicts</h3>
+          <p>Based on your history and context, Ghost AI suggests the likely completion in gray.</p>
+          <code>git commit -m "fix: ..."</code>
+        </article>
+        <article class="step reveal">
+          <div class="step-number">03</div>
+          <h3>Accept or dismiss</h3>
+          <p>Press &rarr; to accept the suggestion, or keep typing / Esc to dismiss. You're always in control.</p>
+          <code>&rarr; accept · Esc dismiss</code>
+        </article>
+      </div>
+    </section>
+
+    <!-- Providers (surface cards) -->
+    <section class="shell section" id="providers">
+      <div class="head">
+        <div>
+          <p class="kicker">03 / PROVIDERS</p>
+          <h2>Works with<br><em>your AI stack.</em></h2>
+        </div>
+        <p>Ghost AI isn't locked to one provider. Run it locally with Ollama, or point it at any OpenAI-compatible endpoint or Anthropic Claude.</p>
+      </div>
+      <div class="providers">
+        <article class="provider reveal">
+          <div class="provider-dot"></div>
+          <h3>Ollama</h3>
+          <p>Local, private, no cloud required. Runs on your machine with models you choose.</p>
+          <code>ollama</code>
+        </article>
+        <article class="provider reveal reveal-delay">
+          <div class="provider-dot"></div>
+          <h3>OpenAI Compatible</h3>
+          <p>Any endpoint speaking the OpenAI API format — self-hosted proxies, local servers, and more.</p>
+          <code>openai-compat</code>
+        </article>
+        <article class="provider reveal">
+          <div class="provider-dot"></div>
+          <h3>Claude</h3>
+          <p>Anthropic Claude for advanced reasoning and complex command prediction.</p>
+          <code>claude</code>
+        </article>
+      </div>
+    </section>
+
+    <!-- Prediction preview (before/after HUD terminals) -->
+    <section class="shell section" id="preview">
+      <div class="head">
+        <div>
+          <p class="kicker">04 / IN ACTION</p>
+          <h2>Before and after<br><em>Ghost AI.</em></h2>
+        </div>
+        <p>The same workflow, with inline suggestions that stay out of your way until you need them.</p>
+      </div>
+      <div class="preview">
+        <div class="preview-card reveal">
+          <span class="preview-tag dim">without ghost ai</span>
+          <div class="preview-label dim">standard zsh</div>
+          <div class="preview-terminal">
+            <div class="preview-line"><span class="preview-prompt">&gt; </span><span class="preview-typed">git commit -m </span><span class="cursor blink">▋</span></div>
+            <div class="preview-hint">You type everything manually.</div>
+          </div>
+        </div>
+        <div class="preview-card reveal reveal-delay">
+          <span class="preview-tag primary">with ghost ai</span>
+          <div class="preview-label primary">inline suggestion</div>
+          <div class="preview-terminal">
+            <div class="preview-line"><span class="preview-prompt">&gt; </span><span class="preview-typed">git commit -m </span><span class="preview-ghost">"fix: resolve login race"</span></div>
+            <div class="preview-hint">Press &rarr; to accept · Esc to dismiss</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation (uplink-style console) -->
+    <section class="shell section" id="install">
+      <div class="head">
+        <div>
+          <p class="kicker">05 / INSTALL</p>
+          <h2>Install in one line</h2>
+        </div>
+        <p>Drop it into your zshrc, restart your shell, and start typing.</p>
+      </div>
+      <div class="install-card">
+        <div class="install-code">
+          <span class="code-dollar">$</span>
+          <span class="code-text">curl -fsSL https://raw.githubusercontent.com/cybercoretech/zsh-ghost-ai/main/install.sh | bash</span>
+          <button class="btn-copy" id="btn-copy" aria-label="Copy install command">COPY</button>
+        </div>
+        <ol class="install-steps">
+          <li>Run the command above in your terminal.</li>
+          <li>Restart your shell: <code>exec zsh</code></li>
+          <li>Start typing &mdash; press <kbd>&rarr;</kbd> to accept a suggestion.</li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="shell footer">
+    <cybercore-contact repo="zsh-ghost-ai" bare><p>Contact: <a href="mailto:info@cybercoretech.net">info@cybercoretech.net</a></p></cybercore-contact>
+    <div class="foot-row">
+      <div class="brand-foot">
+        <span>CYBERCORE TECH / GHOST AI / MIT OR APACHE-2.0</span>
+      </div>
+      <div class="keys">
+        <kbd>⌘K</kbd> search
+      </div>
+      <nav class="links">
+        <a href="https://cybercoretech.github.io/">CYBERCORE ECOSYSTEM ↗</a>
+        <span>v0.1.0 · MIT</span>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initGhostEffect } from "./js/ghost-effect.js";
+    import { startInteractiveDemo } from "./js/terminal-demo.js";
+
+    /* Reveal-on-scroll for cards and sections */
+    const ro = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in');
+          ro.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
+
+    window.addEventListener("DOMContentLoaded", () => {
+      initGhostEffect();
+    });
+  </script>
+
+  <!-- Cybercore shared scripts -->
+  <script>window.SITE={dataRoot:'https://cybercoretech.github.io/data',defaultTheme:'cybercore-tech',mashups:[],themeVars:{bg:'--bg-primary',white:'--text-primary',panel:'--bg-secondary',line:'--border',muted:'--text-secondary',cyan:'--accent-primary'}};</script>
+  <script src="https://cybercoretech.github.io/kit/v1/cybercore.js"></script>
+  <script type="module" src="https://cybercoretech.github.io/kit/contact.js"></script>
+
+</body>
+</html>

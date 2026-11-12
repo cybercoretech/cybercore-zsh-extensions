@@ -1,0 +1,13 @@
+/* ==========================================================================
+   zsh-ghost-ai — CyberCore theme chooser (navbar, diagprint-sized)
+   ========================================================================== */
+
+/* The <cybercore-theme-chooser adopt> element in index.html carries its own
+   shadow-DOM styles from kit/chooser.css. The --ccx-* tokens below (set in
+   layout.css) size it to match diagprint's theme trigger button. The legacy
+   .theme-button / .theme-menu classes are no longer rendered — cybercore.js
+   replaces .theme-picker with the custom element. */
+
+.theme-picker {
+  position: relative;
+}

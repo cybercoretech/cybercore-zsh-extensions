@@ -1,0 +1,54 @@
+name: Explain Autofix CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Explain Autofix installer
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+
+      - name: Validate installer syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n extensions/zsh-explain-autofix/install.sh
+
+      - name: Run ShellCheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          shellcheck -s bash \
+            extensions/zsh-explain-autofix/install.sh \
+            extensions/zsh-explain-autofix/tests/run.sh
+
+      - name: Validate required extension files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f extensions/zsh-explain-autofix/install.sh
+          test -f extensions/zsh-explain-autofix/explain-autofix.zsh
+          test -d extensions/zsh-explain-autofix/rules
+
+      - name: Run installer integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash extensions/zsh-explain-autofix/tests/run.sh

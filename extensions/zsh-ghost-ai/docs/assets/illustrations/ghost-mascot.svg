@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="ghostBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#101722"/>
+      <stop offset="100%" stop-color:#0A0D12"/>
+    </linearGradient>
+    <filter id="ghostBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  
+  <!-- Ghost body -->
+  <path d="M50 100Q50 60 100 60Q150 60 150 100Q150 140 110 160Q70 160 50 100Z" fill="url(#ghostBody)" stroke="#1F2A3B" stroke-width="1" opacity="0.9"/>
+  <path d="M50 100Q50 60 100 60Q150 60 150 100Q150 140 110 160Q70 160 50 100Z" fill="none" stroke="#00F0FF" stroke-width="1" opacity="0.15"/>
+  
+  <!-- Eyes -->
+  <circle cx="75" cy="85" r="3" fill="#00F0FF"/>
+  <circle cx="75" cy="85" r="1.5" fill="#E5EDF5"/>
+  <circle cx="125" cy="85" r="3" fill="#00F0FF"/>
+  <circle cx="125" cy="85" r="1.5" fill="#E5EDF5"/>
+  
+  <!-- Mouth (subtle smile) -->
+  <path d="M85 115Q100 125 115 115" fill="none" stroke="#5C7087" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+  
+  <!-- Glow aura -->
+  <path d="M40 90Q40 50 100 50Q160 50 160 90Q160 130 120 150Q80 150 40 90Z" fill="#00F0FF" opacity="0.08" filter="url(#ghostBlur)"/>
+  
+  <!-- Cursor tail -->
+  <path d="M110 160Q110 170 130 170Q140 170 145 165" fill="none" stroke="#39FF14" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+</svg>

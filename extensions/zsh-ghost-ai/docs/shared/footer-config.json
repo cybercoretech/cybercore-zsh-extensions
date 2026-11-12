@@ -1,0 +1,62 @@
+{
+  "id": "zsh-ghost-ai",
+  "name": "GHOST AI",
+  "email": "info@cybercoretech.net",
+  "emblem": "assets/logos/ghost-ai-mark.svg",
+  "logo": {
+    "src": "assets/logos/ghost-ai-logo.svg",
+    "width": 400,
+    "height": 80
+  },
+  "tagline": "AI-POWERED COMMAND PREDICTION FOR ZSH",
+  "signoff": "YOUR TERMINAL KNOWS WHAT COMES NEXT.",
+  "supportHeading": "KEEP THE GHOST RUNNING.",
+  "supportText": "Enjoying the suggestions? Help keep this corner of the terminal open.",
+  "creditLine": "BAD COMMANDS. GREAT NIGHTS.",
+  "network": [
+    {
+      "label": "Cybercore",
+      "href": "https://cybercoretech.github.io/"
+    },
+    {
+      "label": "After/Cut",
+      "href": "https://aftercut.pages.dev/"
+    },
+    {
+      "label": "LastActionReel",
+      "href": "https://lastactionreel.pages.dev/"
+    }
+  ],
+  "links": [
+    {
+      "label": "Install now",
+      "href": "#install"
+    },
+    {
+      "label": "Interactive demo",
+      "href": "#demo"
+    },
+    {
+      "label": "Features",
+      "href": "#features"
+    },
+    {
+      "label": "Artwork & sources",
+      "href": "#"
+    },
+    {
+      "label": "SOURCES.md",
+      "href": "SOURCES.md"
+    }
+  ],
+  "support": [
+    {
+      "label": "Buy Me a Coffee",
+      "href": "https://buymeacoffee.com/cybercoretech"
+    },
+    {
+      "label": "PayPal · @elementxdesign",
+      "href": "https://www.paypal.com/paypalme/elementxdesign"
+    }
+  ]
+}

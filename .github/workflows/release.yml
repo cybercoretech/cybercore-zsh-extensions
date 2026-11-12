@@ -1,0 +1,135 @@
+name: Shared Extension Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package and publish both extensions
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate shared version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          TAG="${GITHUB_REF_NAME}"
+
+          if [[ "$TAG" != "v$VERSION" ]]; then
+            echo "::error::Tag $TAG does not match VERSION file v$VERSION"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate installer syntax and lint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+
+          sh -n extensions/zsh-ghost-ai/install.sh
+          sh -n extensions/zsh-ghost-ai/uninstall.sh
+          bash -n extensions/zsh-explain-autofix/install.sh
+
+          shellcheck -s sh \
+            extensions/zsh-ghost-ai/install.sh \
+            extensions/zsh-ghost-ai/uninstall.sh
+
+          shellcheck -s bash \
+            extensions/zsh-explain-autofix/install.sh \
+            extensions/zsh-explain-autofix/tests/run.sh
+
+          bash extensions/zsh-explain-autofix/tests/run.sh
+
+      - name: Build independent extension archives
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          for extension in zsh-ghost-ai zsh-explain-autofix; do
+            source_dir="extensions/$extension"
+            archive="dist/$extension-v$VERSION.tar.gz"
+
+            test -d "$source_dir"
+
+            tar -czf "$archive" \
+              --exclude='.git' \
+              --exclude='.DS_Store' \
+              -C "$source_dir" .
+
+            archive_contents="$(tar -tzf "$archive")"
+
+            case "$extension" in
+              zsh-ghost-ai)
+                required_entry="zsh-ghost-ai.plugin.zsh"
+                ;;
+              zsh-explain-autofix)
+                required_entry="explain-autofix.zsh"
+                ;;
+              *)
+                echo "::error::Unexpected extension: $extension"
+                exit 1
+                ;;
+            esac
+
+            if ! grep -Eq "(^|/)$required_entry$" <<< "$archive_contents"; then
+              echo "::error::Archive $archive is missing $required_entry"
+              exit 1
+            fi
+
+            if ! grep -Eq '(^|/)install\.sh$' <<< "$archive_contents"; then
+              echo "::error::Archive $archive is missing install.sh"
+              exit 1
+            fi
+
+            echo "Validated required files in $archive"
+            echo "Built $archive"
+          done
+
+      - name: Generate shared checksum manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum \
+            "zsh-ghost-ai-v${{ steps.version.outputs.version }}.tar.gz" \
+            "zsh-explain-autofix-v${{ steps.version.outputs.version }}.tar.gz" \
+            > SHA256SUMS
+
+          sha256sum --check SHA256SUMS
+
+      - name: Publish one GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/zsh-ghost-ai-v$VERSION.tar.gz" \
+            "dist/zsh-explain-autofix-v$VERSION.tar.gz" \
+            dist/SHA256SUMS \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
