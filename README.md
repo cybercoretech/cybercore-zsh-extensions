@@ -16,3 +16,7 @@
 
 ### Session continuity
 - **[zsh-session-continuity](extensions/zsh-session-continuity/README.md)** — Record objectives, progress, decisions, and handoff notes.
+
+### AI-assisted shell workflows
+- **[zsh-explain-autofix](extensions/zsh-explain-autofix/README.md)** — Explain shell errors and help develop corrective commands.
+- **[zsh-ghost-ai](extensions/zsh-ghost-ai/README.md)** — AI-assisted Zsh command-line workflow support.
