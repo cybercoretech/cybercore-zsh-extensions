@@ -16,6 +16,7 @@ typeset -gi _ZGA_ENABLED=1 _ZGA_LAST_STATUS=0
 # and asks us through _zsh_autosuggest_strategy_ghost_ai (lib/strategy.zsh).
 # Empty until decided (mode auto decides at the first prompt).
 typeset -g _ZGA_MODE=""
+typeset -g _ZGA_LASTWIDGET=""  # the widget that caused this redraw (see _zga_note_lastwidget)
 typeset -gA _ZGA_FALLBACK   # "<keymap><keys>" -> widget the key had before us
 
 # Widgets whose edits may start a request. History moves, completion menus,
@@ -68,7 +69,7 @@ _zga_wants_request() {
   _zga_get min-chars
   (( $#BUFFER >= REPLY )) || return 1
   _zga_ignored "$BUFFER" && return 1
-  [[ $LASTWIDGET == ${~_ZGA_TRIGGER_WIDGETS} ]] || return 1
+  [[ ${_ZGA_LASTWIDGET:-$LASTWIDGET} == ${~_ZGA_TRIGGER_WIDGETS} ]] || return 1
   return 0
 }
 
@@ -179,14 +180,45 @@ ghost-ai-toggle() {
 
 # --- hooks -----------------------------------------------------------------
 
+_zga_noop() { :; }
+
+# zsh < 5.9 runs redraw hooks without `zle -f nolast`, so each hook that runs
+# before ours replaces $LASTWIDGET with its own name. Note the real one first.
+_zga_note_lastwidget() { _ZGA_LASTWIDGET=$LASTWIDGET; }
+
+# _zga_note_first: put _zga_note_lastwidget at index 0 of the redraw hooks,
+# shifting the others up by one (add-zle-hook-widget has no "first" option).
+_zga_note_first() {
+  emulate -L zsh
+  local -a hooks rest
+  local h
+  zstyle -g hooks zle-line-pre-redraw widgets
+  for h in ${hooks:#(<->:|)_zga_note_lastwidget}; do
+    if [[ $h == <->:* ]]; then rest+=("$(( ${h%%:*} + 1 )):${h#*:}")
+    else rest+=("$h"); fi
+  done
+  (( ${+widgets[_zga_note_lastwidget]} )) || zle -N _zga_note_lastwidget
+  zstyle zle-line-pre-redraw widgets 0:_zga_note_lastwidget $rest
+}
+
 _zga_line_init() {
   if [[ -z $_ZGA_MODE ]]; then
     _zga_resolve_mode
     # Run our redraw hook after any added since we loaded:
     # zsh-syntax-highlighting 0.7 rebuilds region_highlight in its own hook
     # and would wipe the dim highlight if it ran after us.
+    # zsh-syntax-highlighting < 0.8 wraps the hook dispatcher itself; once
+    # add-zle-hook-widget adopts that wrapper as a hook, the wrapper's call to
+    # the original dispatcher would recurse, so make the original a no-op.
+    local w=${widgets[zle-line-pre-redraw]}
+    if [[ $w == user:_zsh_highlight_widget_* ]]; then
+      zle -N ${w#user:_zsh_highlight_widget_} _zga_noop
+      zle -N _zga_pre_redraw   # it wrapped our widgets too; its re-highlight drops the dim
+      zle -N _zga-apply _zga_apply_widget
+    fi
     add-zle-hook-widget -d line-pre-redraw _zga_pre_redraw
     add-zle-hook-widget line-pre-redraw _zga_pre_redraw
+    _zga_note_first
   fi
   _ZGA_LAST_BUFFER=$BUFFER
   _ZGA_QUIET_FOR=""

@@ -27,6 +27,17 @@ _zga_resolve_mode() {
     # zsh-autosuggestions declares this as an array (users may set a string);
     # a plain array assignment works for both and keeps it global.
     ZSH_AUTOSUGGEST_STRATEGY=($strategies)
+    # zsh-autosuggestions wraps widgets it doesn't know so that they clear
+    # its suggestion first; ours pass → and End on to its accept widgets,
+    # which then had nothing to accept. Keep ours out of its wrapping.
+    local -a own=(ghost-ai-accept ghost-ai-accept-end-of-line ghost-ai-accept-word
+                  ghost-ai-dismiss ghost-ai-toggle) w
+    if (( ${+ZSH_AUTOSUGGEST_IGNORE_WIDGETS} )); then
+      for w in $own; do
+        (( ${ZSH_AUTOSUGGEST_IGNORE_WIDGETS[(Ie)$w]} )) || ZSH_AUTOSUGGEST_IGNORE_WIDGETS+=($w)
+      done
+    fi
+    for w in $own; do zle -N $w 2>/dev/null; done   # drop a wrapper it already added
   fi
 }
 
