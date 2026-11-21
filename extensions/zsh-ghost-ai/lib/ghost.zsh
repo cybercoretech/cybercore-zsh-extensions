@@ -179,12 +179,23 @@ ghost-ai-toggle() {
 
 # --- hooks -----------------------------------------------------------------
 
+_zga_noop() { :; }
+
 _zga_line_init() {
   if [[ -z $_ZGA_MODE ]]; then
     _zga_resolve_mode
     # Run our redraw hook after any added since we loaded:
     # zsh-syntax-highlighting 0.7 rebuilds region_highlight in its own hook
     # and would wipe the dim highlight if it ran after us.
+    # zsh-syntax-highlighting < 0.8 wraps the hook dispatcher itself; once
+    # add-zle-hook-widget adopts that wrapper as a hook, the wrapper's call to
+    # the original dispatcher would recurse, so make the original a no-op.
+    local w=${widgets[zle-line-pre-redraw]}
+    if [[ $w == user:_zsh_highlight_widget_* ]]; then
+      zle -N ${w#user:_zsh_highlight_widget_} _zga_noop
+      zle -N _zga_pre_redraw   # it wrapped our widgets too; its re-highlight drops the dim
+      zle -N _zga-apply _zga_apply_widget
+    fi
     add-zle-hook-widget -d line-pre-redraw _zga_pre_redraw
     add-zle-hook-widget line-pre-redraw _zga_pre_redraw
   fi
